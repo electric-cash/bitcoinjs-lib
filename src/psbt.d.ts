@@ -76,7 +76,7 @@ export declare class Psbt {
     addInput(inputData: PsbtInputExtended): this;
     addOutputs(outputDatas: PsbtOutputExtended[]): this;
     addOutput(outputData: PsbtOutputExtended): this;
-    extractTransaction(disableFeeCheck?: boolean): Transaction;
+    extractTransaction(disableFeeCheck?: boolean, customFee?: number): Transaction;
     getFeeRate(): number;
     getFee(): number;
     finalizeAllInputs(): this;

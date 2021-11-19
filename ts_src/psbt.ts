@@ -312,15 +312,21 @@ export class Psbt {
     return this;
   }
 
-  extractTransaction(disableFeeCheck?: boolean): Transaction {
+  extractTransaction(disableFeeCheck?: boolean, customFee?: number): Transaction {
     if (!this.data.inputs.every(isFinalized)) throw new Error('Not finalized');
+
     const c = this.__CACHE;
+
     if (!disableFeeCheck) {
       checkFees(this, c, this.opts);
     }
+
     if (c.__EXTRACTED_TX) return c.__EXTRACTED_TX;
+
     const tx = c.__TX.clone();
-    inputFinalizeGetAmts(this.data.inputs, tx, c, true);
+
+    inputFinalizeGetAmts(this.data.inputs, tx, c, true, customFee);
+
     return tx;
   }
 
@@ -1125,6 +1131,7 @@ function getTxCacheValue(
   } else {
     tx = c.__TX.clone();
   }
+
   inputFinalizeGetAmts(inputs, tx, c, mustFinalize);
   if (key === '__FEE_RATE') return c.__FEE_RATE!;
   else if (key === '__FEE') return c.__FEE!;
@@ -1606,11 +1613,14 @@ function inputFinalizeGetAmts(
   tx: Transaction,
   cache: PsbtCache,
   mustFinalize: boolean,
+  customFee?: number,
 ): void {
   let inputAmount = 0;
+  
   inputs.forEach((input, idx) => {
-    if (mustFinalize && input.finalScriptSig)
+    if (mustFinalize && input.finalScriptSig) {
       tx.ins[idx].script = input.finalScriptSig;
+    }
     if (mustFinalize && input.finalScriptWitness) {
       tx.ins[idx].witness = scriptWitnessToWitnessStack(
         input.finalScriptWitness,
@@ -1622,18 +1632,24 @@ function inputFinalizeGetAmts(
       const nwTx = nonWitnessUtxoTxFromCache(cache, input, idx);
       const vout = tx.ins[idx].index;
       const out = nwTx.outs[vout] as Output;
+
       inputAmount += out.value;
     }
   });
+
   const outputAmount = (tx.outs as Output[]).reduce(
     (total, o) => total + o.value,
     0,
   );
-  const fee = inputAmount - outputAmount;
+
+  const fee = customFee || inputAmount - outputAmount;
+
   if (fee < 0) {
     throw new Error('Outputs are spending more than Inputs');
   }
+
   const bytes = tx.virtualSize();
+
   cache.__FEE = fee;
   cache.__EXTRACTED_TX = tx;
   cache.__FEE_RATE = Math.floor(fee / bytes);
