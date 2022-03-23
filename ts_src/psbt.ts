@@ -1642,7 +1642,7 @@ function inputFinalizeGetAmts(
     0,
   );
 
-  const fee = customFee || inputAmount - outputAmount;
+  const fee = isNaN(customFee) ? inputAmount - outputAmount : customFee;
 
   if (fee < 0) {
     throw new Error('Outputs are spending more than Inputs');

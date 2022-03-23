@@ -1252,7 +1252,8 @@ function inputFinalizeGetAmts(inputs, tx, cache, mustFinalize, customFee) {
     }
   });
   const outputAmount = tx.outs.reduce((total, o) => total + o.value, 0);
-  const fee = customFee || inputAmount - outputAmount;
+  const fee = isNaN(customFee) ? inputAmount - outputAmount : customFee;
+  
   if (fee < 0) {
     throw new Error('Outputs are spending more than Inputs');
   }
